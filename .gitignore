@@ -1,0 +1,10 @@
+.vscode/*
+*.code-workspace
+*.dSYM/*
+*results/*
+py/plots/*
+todo.md
+
+komp
+*.so
+ref*
