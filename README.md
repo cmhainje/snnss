@@ -4,26 +4,28 @@ supernova explosions, based on the Kompaneets formalism developed by [Wang and
 Burrows](https://arxiv.org/abs/2006.12240).
 
 ## Use
-There are two primary ways to use the methods provided herein. One can use the
-solver itself by compiling `komp.c` as follows
+There are two primary ways to use the methods provided herein. The primary way
+that one can use the solver is to use the `main()` method in `komp.c` to test
+the step function. To do this, one can run 
 ```
-gcc komp.c num.c -o komp
+make
 ```
-The resulting program takes a single integer command-line argument which is the
-number of sampling points to use to sample the energy distribution of neutrinos.
-It then starts with a sample distribution of a Gaussian (mean 10 MeV, width 3
-MeV) and uses the hard-coded values of nucleon temperature (`kT)`, mass density
-(`rhoN`), etc. and evolves this distribution in time using the solver. The
-results are written to a folder called `results/`, and can be analyzed using the
-`py/analysis.ipynb` notebook.
+This creates an executable called `komp` than takes a single integer
+command-line argument, which is the number of energy zones to use. By default,
+it starts with a sample distribution that is a Gaussian with mean 10 MeV and
+width 3 MeV. Physical parameters, such as the nucleon temperature (`kT`) and the
+mass density (`rhoN`) are hard-coded values. The distribution is evolved in time
+for a fixed number of steps, and snapshots are written to a folder called
+`results/` which can be analyzed using the `py/analysis.ipynb` notebook.
 
-The other method of use is to compile the numerical methods for external use.
-This can be done with 
+The other primary method is to compile the methods for external use. This can be
+done with
 ```
 make ext
 ```
 This command will make an outward-facing library called `lib.so` with the
-interpolation, differentiation, and ODE-solving methods. These methods can then
-be used in other applications, such as Python or Julia notebooks. As an example,
-see the `py/eval.ipynb` notebook, which evaluates the different numerical
-methods.
+the step, interpolation, differentiation, and ODE-solving methods. These
+methods can then be used in other applications, such as Python or Julia
+notebooks. As an example, see the `py/eval.ipynb` notebook, which evaluates
+the different numerical methods, or the `py/test.ipynb` which runs the full
+solver.
