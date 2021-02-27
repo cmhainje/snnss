@@ -3,6 +3,9 @@
 *.dSYM/*
 *results/*
 py/plots/*
+py/.ipynb_checkpoints/*
+py/*.ipynb
+py/__pycache__/*
 todo.md
 
 komp
