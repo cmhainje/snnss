@@ -1,13 +1,19 @@
 .vscode/*
-*.code-workspace
 *.dSYM/*
 *results/*
-py/plots/*
-py/.ipynb_checkpoints/*
-py/*.ipynb
-py/__pycache__/*
-todo.md
 
-komp
+py/.ipynb_checkpoints/*
+py/__pycache__/*
+py/plots/*
+py/pickles/*
+
+*.code-workspace
+*.swp
 *.so
+*.out
+*.pickle
+*.ipynb
+
+todo.md
+komp
 ref*

@@ -11,7 +11,6 @@ bool WRITE_RESULTS = true;
 
 long double gaussian(long double x)
 {
-    // return 0.5 * expl(-0.5 * powl((x - 20.0) / 5.0, 2));
     return 0.5 * expl(-0.5 * powl((x - 10.0) / 3.0, 2));
 }
 
@@ -52,22 +51,39 @@ void write_out(FILE *file, int step, long double t, int n,
 }
 
 /**
+ * Computes the physical coefficient (referred to as `alpha` in my paper).
+ *
+ * @param kT    nucleon temperature [MeV]
+ * @param rho_N nucleon mass density [g cm^-3]
+ */
+long double compute_coeff(long double kT, long double rho_N)
+{
+    long double beta = 1 / kT;
+    long double nN = rho_N * 1e3 * powl(c,2) / (m * e_unit) * powl(l_unit,3);
+    return 2 * G2 * nN / (3 * pi * powl(beta,3) * m);
+}
+
+/**
  * Computes I_\nu on energy zone boundaries using the x^3 J scheme.
  * 
  * Note that this does not include the physical coefficient:
  *     (2 n_N G^2) / (3 pi beta^3 m)
  * 
- * @param I_nu  array to be filled [length: n+1]
- * @param xs    dimensionless energy zone centers [length: n]
- * @param x3J   sampled values of x^3 J(x) [length: n]
- * @param n     number of energy zones
- * @param beta  inverse nucleon temperature [MeV]
- * @param Y_e   electron fraction
+ * @param I_nu      array to be filled [length: n+1]
+ * @param xs        dimensionless energy zone centers [length: n]
+ * @param x3J       sampled values of x^3 J(x) [length: n]
+ * @param n         number of energy zones
+ * @param beta      inverse nucleon temperature [MeV]
+ * @param Y_e       electron fraction
+ * @param interp    interpolation function to use on f
+ * @param deriv     differentiation function to use on f
  */
 void compute_Inu(
     long double I_nu[],
     long double xs[], long double x3J[], int n,
-    long double beta, long double Y_e
+    long double beta, long double Y_e,
+    void (*interp)(long double[], long double[], long double[], int),
+    void (*deriv)(long double[], long double[], long double[], int)
 ) {
     int i;
 
@@ -79,8 +95,8 @@ void compute_Inu(
 
     // Compute x^3 J and d(x^3 J)/d(log x) on inner bin edges
     long double itp_x3J[n-1], dx3J_dlogx[n-1];
-    cubic_itp(itp_x3J, logx, logx3J, n-1);
-    cubic_diff(dx3J_dlogx, logx, logx3J, n-1);
+    (*interp)(itp_x3J, logx, logx3J, n-1);
+    (*deriv)(dx3J_dlogx, logx, logx3J, n-1);
     for (i = 0; i < n - 1; i++) {
         itp_x3J[i] = expl(itp_x3J[i]);
         dx3J_dlogx[i] = dx3J_dlogx[i] * itp_x3J[i];
@@ -108,23 +124,29 @@ void compute_Inu(
  * Computes the right-hand side of the ODE on the energy zone centers 
  * using the x^3 scheme.
  * 
- * @param out   array to be filled [length: n]
- * @param xs    dimensionless energy zone centers [length: n]
- * @param x3J   sampled values of x^3 J(x) [length: n]
- * @param n     number of energy zones
- * @param beta  inverse nucleon temperature [MeV]
- * @param Y_e   electron fraction
+ * @param out       array to be filled [length: n]
+ * @param xs        dimensionless energy zone centers [length: n]
+ * @param x3J       sampled values of x^3 J(x) [length: n]
+ * @param n         number of energy zones
+ * @param beta      inverse nucleon temperature [MeV]
+ * @param Y_e       electron fraction
+ * @param interp_f  interpolation function to use on f
+ * @param deriv_f   differentiation function to use on f
+ * @param deriv_I   differentiation function to use on I_nu
  */
 void compute_rhs(
     long double out[],
     long double xs[], long double x3J[], int n,
-    long double beta, long double Y_e
+    long double beta, long double Y_e,
+    void (*interp_f)(long double[], long double[], long double[], int),
+    void (*deriv_f)(long double[], long double[], long double[], int),
+    void (*deriv_I)(long double[], long double[], long double[], int)
 ) {
     int i;
 
     // Compute I_nu on the bin edges
     long double I_nu[n+1];
-    compute_Inu(I_nu, xs, x3J, n, beta, Y_e);
+    compute_Inu(I_nu, xs, x3J, n, beta, Y_e, interp_f, deriv_f);
 
     // Compute d(I_nu)/d(log x) on bin centers and write to out
     long double log_edges[n+1];
@@ -133,7 +155,7 @@ void compute_rhs(
         log_edges[i] = logl(xs[i]) - 0.5 * bin_w;
     log_edges[n] = logl(xs[n-1]) + 0.5 * bin_w;
 
-    linear_diff(out, log_edges, I_nu, n);
+    (*deriv_I)(out, log_edges, I_nu, n);
 }
 
 
@@ -155,7 +177,7 @@ void compute_rhs(
  * @param qdot      length: n
  * @param Qdot      length: n (for now)
  */
-void for_burrows(
+void compute_step(
     long double kT, long double rho_N, long double Y_e,
     long double energies[], long double Js[], int n, long double dt,
     long double Jout[], long double I_nu[], long double qdot[], long double Qdot[]
@@ -176,11 +198,11 @@ void for_burrows(
     }
     
     // Compute I_nu on the bin edges
-    compute_Inu(I_nu, xs, x3J, n, beta, Y_e);
+    compute_Inu(I_nu, xs, x3J, n, beta, Y_e, cubic_itp, cubic_diff);
 
     // Compute update to x^3 J
     long double dInu_dlogx[n];
-    compute_rhs(dInu_dlogx, xs, x3J, n, beta, Y_e);
+    compute_rhs(dInu_dlogx, xs, x3J, n, beta, Y_e, cubic_itp, cubic_diff, linear_diff);
 
     // Update Js 
     for (i = 0; i < n; i++) {
@@ -205,44 +227,76 @@ void for_burrows(
 
 
 /**
- * @param kT        temperature [MeV]
- * @param rho_N     mass density [g cm^-3]
+ * Physical parameters:
+ * @param kT        nucleon temperature [MeV]
+ * @param rho_N     nucleon mass density [g/cm^3]
  * @param Y_e       electron fraction
- * @param es        zone centers [MeV]
- * @param Js        mutable
- * @param Jout      (want: don't mutate Js, use this instead)
- * @param dt        step size [s]
  * 
- * @param Qdot      want
+ * Input
+ * @param energies  energy zone centers [MeV]
+ * @param Js        distribution function
+ * @param n         number of bins (length of energies and Js arrays)
+ * @param dt        time step size [s]
  * 
- * @param I_nu
- * @param qdot
+ * Output
+ * @param Jout      length: n
+ * @param I_nu      length: n+1
+ * @param qdot      length: n
+ * @param Qdot      length: n (for now)
  * 
- * @param t         don't use
- * @param depE      make optional
- * @param deltax3J  make optional
+ * Numerical methods
+ * @param interp_f  interpolation function to use on f
+ * @param deriv_f   differentiation function to use on f
+ * @param deriv_I   differentiation function to use on I_nu
  */
-void compute_step(long double depE[], long double deltax3J[],
-    long double xs[], long double Js[], int n_bin, long double t, long double dt,
-    long double beta, long double rhoN, long double Y_e)
-{
+void compute_step_dev(
+    long double kT, long double rho_N, long double Y_e,
+    long double energies[], long double Js[], int n, long double dt,
+    long double Jout[], long double I_nu[], long double qdot[], long double Qdot[],
+    void (*interp_f)(long double[], long double[], long double[], int),
+    void (*deriv_f)(long double[], long double[], long double[], int),
+    void (*deriv_I)(long double[], long double[], long double[], int)
+) {
     int i;
 
-    // Make physically relevant parameters
-    long double nN = rhoN * 1e3 * powl(c,2) / (m * e_unit) * powl(l_unit,3);
-
-    // leverage the for_burrows method for testing
-    long double es[n_bin], Jout[n_bin], Inu[n_bin], qdot[n_bin], Qdot[n_bin];
-    for (i = 0; i < n_bin; i++) es[i] = xs[i] / beta;
-    for_burrows(1 / beta, rhoN, Y_e, es, Js, n_bin, dt, Jout, Inu, qdot, Qdot);
-
-    // Compute deposited energy and update to Js
+    // Compute relevant parameters
+    long double beta = 1 / kT;
+    long double nN = rho_N * 1e3 * powl(c,2) / (m * e_unit) * powl(l_unit,3);
     long double coeff = 2 * G2 * nN / (3 * pi * powl(beta,3) * m);
-    long double bin_w = logl(xs[1]) - logl(xs[0]);
-    for (i = 0; i < n_bin; i++) {
-        depE[i] = -coeff / beta * Inu[i] / powl(xs[i] * expl(-bin_w * 0.5), 2);
-        deltax3J[i] = powl(xs[i], 3) * (Jout[i] - Js[i]);
-        Js[i] = Jout[i];
+    dt /= t_unit;
+
+    // Compute dimensionless energy zone centers, x^3 J
+    long double xs[n], x3J[n];
+    for (i = 0; i < n; i++) {
+        xs[i] = energies[i] * beta;
+        x3J[i] = xs[i]*xs[i]*xs[i] * Js[i];
+    }
+    
+    // Compute I_nu on the bin edges
+    compute_Inu(I_nu, xs, x3J, n, beta, Y_e, interp_f, deriv_f);
+
+    // Compute update to x^3 J
+    long double dInu_dlogx[n];
+    compute_rhs(dInu_dlogx, xs, x3J, n, beta, Y_e, interp_f, deriv_f, deriv_I);
+
+    // Update Js 
+    for (i = 0; i < n; i++) {
+        x3J[i] += dt * coeff * dInu_dlogx[i];
+        Jout[i] = x3J[i] / powl(xs[i], 3);
+    }
+
+    // Compute q dot, the spectrum of energy deposition
+    // \dot{q} =  kT (I_\nu - d/dx (x I_\nu))   <- (eq. 44)
+    //         = -kT d(I_\nu)/d(log x)
+    for (i = 0; i < n; i++) {
+        qdot[i] = - kT * coeff * dInu_dlogx[i];
+    }
+
+    // Compute Q dot, the rate of energy deposition
+    // \dot{Q} = (kT)^4 / (2 \pi^2 \hbar^3 c^3) \int dx I_\nu
+    // hmm... this will require some thought
+    for (i = 0; i < n; i++) {
+        Qdot[i] = 0;
     }
 }
 
@@ -257,7 +311,7 @@ int main(int argc, char const *argv[])
     long double beta = 1.0; // MeV^-1  (1-4 MeV)
     long double rhoN = 1e10; // g cm^-3
     long double Y_e  = 0.2; // (0.2 - 0.3)
-    long double nN = rhoN * powl(c,2) / (m * e_unit) * powl(l_unit,3);
+    long double nN = rhoN * 1e3 * powl(c,2) / (m * e_unit) * powl(l_unit,3);
     long double t = 0;
     long double dt = 1e-6; // 1e-6
     int n_step = 50000;
@@ -269,8 +323,9 @@ int main(int argc, char const *argv[])
     long double max_x = max_E * beta;
     long double bin_w = (logl(max_x) - logl(min_x)) / (n_bin - 1);
 
-    long double xs[n_bin], Js[n_bin], x3J[n_bin];
+    long double es[n_bin], xs[n_bin], Js[n_bin], x3J[n_bin];
     for (i = 0; i < n_bin; i++) {
+        es[i] = min_E * expl(i * bin_w);
         xs[i] = min_x * expl(i * bin_w);
         Js[i] = gaussian(xs[i] / beta);
         x3J[i] = Js[i] * powl(xs[i], 3);
@@ -282,11 +337,28 @@ int main(int argc, char const *argv[])
     FILE *file = fopen(filename, "w");
 
     /** KOMPANEETS CALCULATIONS **/
+
+    // Make physically relevant parameters
+    long double nN = rhoN * 1e3 * powl(c,2) / (m * e_unit) * powl(l_unit,3);
+    long double coeff = 2 * G2 * nN / (3 * pi * powl(beta,3) * m);
+
     int step;
     for (step = 0; step < n_step + 1; step++) {
 
         long double depE[n_bin+1], deltax3J[n_bin];
-        compute_step(depE, deltax3J, xs, Js, n_bin, t, dt, beta, rhoN, Y_e);
+
+        // Leverage the compute_step method for testing
+        long double Jout[n_bin], Inu[n_bin], qdot[n_bin], Qdot[n_bin];
+        compute_step(1.0 / beta, rhoN, Y_e, es, Js, n_bin, dt, Jout, Inu, qdot, Qdot);
+
+        // Compute deposited energy and update to Js
+        long double bin_w = logl(xs[1]) - logl(xs[0]);
+        for (i = 0; i < n_bin; i++) {
+            depE[i] = -coeff / beta * Inu[i] / powl(xs[i] * expl(-bin_w * 0.5), 2);
+            deltax3J[i] = powl(xs[i], 3) * (Jout[i] - Js[i]);
+            Js[i] = Jout[i];
+        }
+
         t = step * dt;
 
         bool kill = false;

@@ -25,6 +25,14 @@ long double prot = (-0.5 * (1 - 4 * 0.23122)) * (-0.5 * (1 - 4 * 0.23122)) + 5 *
 long double neut = (-0.5) * (-0.5) + 5 * (1.2723 / 2) * (1.2723 / 2);
 
 /**
+ * Computes the physical coefficient (referred to as `alpha` in my paper).
+ *
+ * @param kT    nucleon temperature [MeV]
+ * @param rho_N nucleon mass density [g cm^-3]
+ */
+long double compute_coeff(long double kT, long double rho_N);
+
+/**
  * Advances the neutrino distribution function through a time step
  * of size dt. 
  * 
@@ -45,10 +53,45 @@ long double neut = (-0.5) * (-0.5) + 5 * (1.2723 / 2) * (1.2723 / 2);
  * @param qdot      energy deposition spectrum [length: n]
  * @param Qdot      currently just zeros [length: n]
  */
-void for_burrows(
+void compute_step(
     long double kT, long double rho_N, long double Y_e,
     long double energies[], long double Js[], int n, long double dt,
     long double Jout[], long double I_nu[], long double qdot[], long double Qdot[]
+);
+
+/**
+ * Dev version of `compute_step()`. Provides a method for directly
+ * specifying the interpolation and differentiation methods.
+ * 
+ * Physical parameters
+ * @param kT        nucleon temperature [MeV]
+ * @param rho_N     nucleon mass density [g/cm^3]
+ * @param Y_e       electron fraction
+ * 
+ * Input
+ * @param energies  energy bins (zone *centers*) [MeV]
+ * @param Js        distribution function
+ * @param n         number of bins (length of energies and Js arrays)
+ * @param dt        time step size [s]
+ * 
+ * Output
+ * @param Jout      updated J values [length: n]
+ * @param I_nu      I_nu on the bin edges [length: n+1]
+ * @param qdot      energy deposition spectrum [length: n]
+ * @param Qdot      currently just zeros [length: n]
+ * 
+ * Numerical methods
+ * @param interp_f  interpolation function to use on f
+ * @param deriv_f   differentiation function to use on f
+ * @param deriv_I   differentiation function to use on I_nu
+ */
+void compute_step_dev(
+    long double kT, long double rho_N, long double Y_e,
+    long double energies[], long double Js[], int n, long double dt,
+    long double Jout[], long double I_nu[], long double qdot[], long double Qdot[],
+    void (*interp_f)(long double[], long double[], long double[], int),
+    void (*deriv_f)(long double[], long double[], long double[], int),
+    void (*deriv_I)(long double[], long double[], long double[], int)
 );
 
 #endif
