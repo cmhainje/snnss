@@ -171,7 +171,7 @@ def compute_step(kT, rho_N, Y_e, energies, Js, dt):
     qdot = np.empty(n, dtype=ctypes.c_longdouble)
     Qdot = np.empty(n, dtype=ctypes.c_longdouble)
 
-    lib.advance_step(
+    lib.compute_step(
         kT, rho_N, Y_e,
         energies.astype(ctypes.c_longdouble),
         Js.astype(ctypes.c_longdouble),
@@ -218,7 +218,7 @@ def compute_step_dev(kT, rho_N, Y_e, energies, Js, dt, itp_f, drv_f, drv_I):
     qdot = np.empty(n, dtype=ctypes.c_longdouble)
     Qdot = np.empty(n, dtype=ctypes.c_longdouble)
 
-    lib.advance_step_dev(
+    lib.compute_step_dev(
         kT, rho_N, Y_e,
         energies.astype(ctypes.c_longdouble),
         Js.astype(ctypes.c_longdouble),

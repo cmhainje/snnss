@@ -33,8 +33,8 @@ class Data():
         self.drv_I = drv_I
 
     def step(self, Js, dt):
-        return step(self.kT, self.rho_N, self.Y_e, self.es, Js, dt, 
-                    self.itp_f, self.drv_f, self.drv_I)
+        return compute_step_dev(self.kT, self.rho_N, self.Y_e, self.es, Js, dt, 
+                                self.itp_f, self.drv_f, self.drv_I)
 
     def plot(self, ax0, ax1, ax2, i, fmt='-', color=None):
         xs = self.es / self.kT
@@ -104,7 +104,7 @@ class Data():
             if (s % epoch_size) == 0:
                 self.Jlist.append(Jout)
                 self.Ilist.append(alpha * Inu)
-                self.deltaJlist.append((Jout - Js) / dt * t_unit)
+                self.deltaJlist.append((Jout - Js) / dt * T_UNIT)
                 self.times.append(t)
                 print(f"{len(self.Jlist)} epochs; {t:.3e} s evolved; current step size: {dt:.3e}")
             s += 1
