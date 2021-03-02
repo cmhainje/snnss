@@ -343,9 +343,6 @@ int main(int argc, char const *argv[])
     FILE *file = fopen(filename, "w");
 
     /** KOMPANEETS CALCULATIONS **/
-
-    // Make physically relevant parameters
-    long double nN = rhoN * 1e3 * powl(c,2) / (m * e_unit) * powl(l_unit,3);
     long double coeff = 2 * G2 * nN / (3 * pi * powl(beta,3) * m);
 
     int step;
