@@ -219,10 +219,13 @@ void compute_step(
 
     // Compute Q dot, the rate of energy deposition
     // \dot{Q} = (kT)^4 / (2 \pi^2 \hbar^3 c^3) \int dx I_\nu
-    // hmm... this will require some thought
-    for (i = 0; i < n; i++) {
-        Qdot[i] = 0;
-    }
+    long double coeffQ = powl(kT, 4) / (2 * pi*pi * powl(hbar * c * l_unit, 3));
+    long double edges[n+1], bin_w = logl(xs[1]) - logl(xs[0]);
+    for (i = 0; i < n; i++) 
+        edges[i] = xs[i] * expl(-0.5 * bin_w);
+    edges[n] = xs[n-1] * expl(0.5 * bin_w);
+    for (i = 0; i < n; i++)
+        Qdot[i] = 0.5 * coeffQ * coeff * (edges[i+1] - edges[i]) * (I_nu[i+1] + I_nu[i]);
 }
 
 
@@ -294,10 +297,13 @@ void compute_step_dev(
 
     // Compute Q dot, the rate of energy deposition
     // \dot{Q} = (kT)^4 / (2 \pi^2 \hbar^3 c^3) \int dx I_\nu
-    // hmm... this will require some thought
-    for (i = 0; i < n; i++) {
-        Qdot[i] = 0;
-    }
+    long double coeffQ = powl(kT, 4) / (2 * pi*pi * powl(hbar * c, 3));
+    long double edges[n+1], bin_w = logl(xs[1]) - logl(xs[0]);
+    for (i = 0; i < n; i++) 
+        edges[i] = xs[i] * expl(-0.5 * bin_w);
+    edges[n] = xs[n-1] * expl(0.5 * bin_w);
+    for (i = 0; i < n; i++)
+        Qdot[i] = 0.5 * coeffQ * coeff * (edges[i+1] - edges[i]) * (I_nu[i+1] + I_nu[i]);
 }
 
 int main(int argc, char const *argv[])
