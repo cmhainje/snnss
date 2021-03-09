@@ -182,50 +182,8 @@ void compute_step(
     long double energies[], long double Js[], int n, long double dt,
     long double Jout[], long double I_nu[], long double qdot[], long double Qdot[]
 ) {
-    int i;
-
-    // Compute relevant parameters
-    long double beta = 1 / kT;
-    long double nN = rho_N * 1e3 * powl(c,2) / (m * e_unit) * powl(l_unit,3);
-    long double coeff = 2 * G2 * nN / (3 * pi * powl(beta,3) * m);
-    dt /= t_unit;
-
-    // Compute dimensionless energy zone centers, x^3 J
-    long double xs[n], x3J[n];
-    for (i = 0; i < n; i++) {
-        xs[i] = energies[i] * beta;
-        x3J[i] = xs[i]*xs[i]*xs[i] * Js[i];
-    }
-    
-    // Compute I_nu on the bin edges
-    compute_Inu(I_nu, xs, x3J, n, beta, Y_e, cubic_itp, cubic_diff);
-
-    // Compute update to x^3 J
-    long double dInu_dlogx[n];
-    compute_rhs(dInu_dlogx, xs, x3J, n, beta, Y_e, cubic_itp, cubic_diff, linear_diff);
-
-    // Update Js 
-    for (i = 0; i < n; i++) {
-        x3J[i] += dt * coeff * dInu_dlogx[i];
-        Jout[i] = x3J[i] / powl(xs[i], 3);
-    }
-
-    // Compute q dot, the spectrum of energy deposition
-    // \dot{q} =  kT (I_\nu - d/dx (x I_\nu))   <- (eq. 44)
-    //         = -kT d(I_\nu)/d(log x)
-    for (i = 0; i < n; i++) {
-        qdot[i] = - kT * coeff * dInu_dlogx[i];
-    }
-
-    // Compute Q dot, the rate of energy deposition
-    // \dot{Q} = (kT)^4 / (2 \pi^2 \hbar^3 c^3) \int dx I_\nu
-    long double coeffQ = powl(kT, 4) / (2 * pi*pi * powl(hbar * c * l_unit, 3));
-    long double edges[n+1], bin_w = logl(xs[1]) - logl(xs[0]);
-    for (i = 0; i < n; i++) 
-        edges[i] = xs[i] * expl(-0.5 * bin_w);
-    edges[n] = xs[n-1] * expl(0.5 * bin_w);
-    for (i = 0; i < n; i++)
-        Qdot[i] = 0.5 * coeffQ * coeff * (edges[i+1] - edges[i]) * (I_nu[i+1] + I_nu[i]);
+    compute_step_dev(kT, rho_N, Y_e, energies, Js, n, dt, Jout, I_nu, qdot, Qdot,
+                     cubic_itp, cubic_diff, linear_diff);
 }
 
 
@@ -286,6 +244,7 @@ void compute_step_dev(
     for (i = 0; i < n; i++) {
         x3J[i] += dt * coeff * dInu_dlogx[i];
         Jout[i] = x3J[i] / powl(xs[i], 3);
+        if (Jout[i] < 1e-30) Jout[i] = 1e-30;
     }
 
     // Compute q dot, the spectrum of energy deposition
