@@ -186,10 +186,11 @@ lib.compute_step_dev.argtypes = atypes + [
     ctypes.c_void_p,
     ctypes.c_void_p,
     ctypes.c_void_p,
-    ctypes.c_int
+    ctypes.c_int,
+    ctypes.c_bool
 ]
 
-def compute_step_dev(kT, rho_N, Y_e, n_type, energies, Js, dt, itp_f, drv_f, drv_I, step):
+def compute_step_dev(kT, rho_N, Y_e, n_type, energies, Js, dt, itp_f, drv_f, drv_I, step, force_pos):
     """Computes a step update of step size dt
 
     Args:
@@ -208,6 +209,7 @@ def compute_step_dev(kT, rho_N, Y_e, n_type, energies, Js, dt, itp_f, drv_f, drv
         values are "linear", "cubic", or "spline".
         step (string): desired integration method to use. Allowed values are
         "euler", "rk2", or "rk4".
+        force_pos (bool): whether to use forced-positive methods on f.
 
     Returns:
         ndarray: updated J distribution
@@ -234,6 +236,7 @@ def compute_step_dev(kT, rho_N, Y_e, n_type, energies, Js, dt, itp_f, drv_f, drv
         itp_methods[itp_f],
         drv_methods[drv_f],
         drv_methods[drv_I],
-        step_methods[step]
+        step_methods[step],
+        force_pos
     )
     return Jout, I_nu, qdot, Qdot

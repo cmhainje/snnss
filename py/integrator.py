@@ -16,22 +16,33 @@ from tqdm import tqdm
 class Data():
     def __init__(self, kT, rho_N, Y_e, n_bins, e_min=1, e_max=100, dt=1e-6,
                  n_type=2, itp_f="cubic", drv_f="cubic", drv_I="linear", 
-                 step="euler"):
+                 step="euler", force_pos=True):
         """Initializes the Data object.
 
         Args:
-            kT (float): nucleon temperature (multiplied by the Boltzmann constant) in MeV
+            kT (float): nucleon temperature (times Boltzmann constant) in MeV
             rho_N (float): nucleon mass density in g/cm^3
             Y_e (float): electron fraction (should be between 0 and 1)
             n_bins (int): number of energy bins to use
-            e_min (int, optional): center of first energy bin in MeV. Defaults to 1.
-            e_max (int, optional): center of last energy bin in MeV. Defaults to 100.
-            dt (float, optional): size of time step for integrate_nstep. Defaults to 1e-6.
-            n_type (int, optional): nucleon type (0: protons, 1: neutrons, else: both). Defaults to 2.
-            itp_f (str, optional): method to use for interpolation of f. Allowed values: {"linear", "cubic", and "spline"}. Defaults to "cubic".
-            drv_f (str, optional): method to use for differentiation of f. Allowed values: {"linear", "cubic", and "spline"}. Defaults to "cubic".
-            drv_I (str, optional): method to use for differentiation of I_nu. Allowed values: {"linear", "cubic", and "spline"}. Defaults to "linear".
-            step (str, optional): method to use for integration stepping. Allowed values: {"euler", "rk2", and "rk4"}. Defaults to "euler".
+            e_min (int, optional): first energy bin in MeV. Defaults to 1.
+            e_max (int, optional): last energy bin in MeV. Defaults to 100.
+            dt (float, optional): size of fixed time step. Defaults to 1e-6.
+            n_type (int, optional): nucleon type (0: protons, 1: neutrons,
+                else: both). Defaults to 2.
+            itp_f (str, optional): method to use for interpolation of f.
+                Allowed values: {"linear", "cubic", and "spline"}. Defaults to
+                "cubic".
+            drv_f (str, optional): method to use for differentiation of f.
+                Allowed values: {"linear", "cubic", and "spline"}. Defaults to
+                "cubic".
+            drv_I (str, optional): method to use for differentiation of I_nu.
+                Allowed values: {"linear", "cubic", and "spline"}. Defaults to
+                "linear".
+            step (str, optional): method to use for integration stepping.
+                Allowed values: {"euler", "rk2", and "rk4"}. Defaults to
+                "euler".
+            force_pos (bool, optional): whether to used forced-positive
+                methods for f.
         """
         self.kT = kT
         self.rho_N = rho_N

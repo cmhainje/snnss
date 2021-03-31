@@ -1,6 +1,7 @@
 #ifndef CH_NUM
 #define CH_NUM
 
+#include <stdbool.h>
 
 /**
  * Provides a clean structure for passing parameters to methods.
@@ -13,6 +14,7 @@ struct Parameters {
     void (*interp_f)(long double[], long double[], long double[], int);
     void (*deriv_f)(long double[], long double[], long double[], int);
     void (*deriv_I)(long double[], long double[], long double[], int);
+    bool force_pos;
 };
 
 /**

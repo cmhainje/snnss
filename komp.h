@@ -94,7 +94,7 @@ void compute_step_dev(
     void (*interp_f)(long double[], long double[], long double[], int),
     void (*deriv_f)(long double[], long double[], long double[], int),
     void (*deriv_I)(long double[], long double[], long double[], int),
-    int stepper
+    int stepper, bool force_pos
 );
 
 #endif

@@ -9,16 +9,6 @@
 
 bool WRITE_RESULTS = false;
 
-// struct Parameters {
-//     long double kT;
-//     long double rho_N;
-//     long double Y_e;
-//     int n_type;
-//     void (*interp_f)(long double[], long double[], long double[], int);
-//     void (*deriv_f)(long double[], long double[], long double[], int);
-//     void (*deriv_I)(long double[], long double[], long double[], int);
-// };
-
 long double gaussian(long double x)
 {
     return 0.5 * expl(-0.5 * powl((x - 10.0) / 3.0, 2));
@@ -74,7 +64,7 @@ long double compute_coeff(long double kT, long double rho_N)
 }
 
 /**
- * Computes I_\nu on energy zone boundaries using the x^3 J scheme.
+ * Computes I_nu on energy zone boundaries using the x^3 J scheme.
  * 
  * Note that this does not include the physical coefficient:
  *     (2 n_N G^2) / (3 pi beta^3 m)
@@ -86,8 +76,8 @@ long double compute_coeff(long double kT, long double rho_N)
  * @param beta      inverse nucleon temperature [MeV]
  * @param Y_e       electron fraction
  * @param n_type    nucleon type (0: proton, 1: neutron, else: both)
- * @param interp    interpolation function to use on f
- * @param deriv     differentiation function to use on f
+ * @param interp    interpolation function to use on f (= J)
+ * @param deriv     differentiation function to use on f (= J)
  */
 void compute_Inu(
     long double I_nu[],
@@ -114,11 +104,18 @@ void compute_Inu(
 
     // Compute x^3 J and d(x^3 J)/d(log x) on inner bin edges
     long double itp_x3J[n-1], dx3J_dlogx[n-1];
-    (*interp)(itp_x3J, logx, logx3J, n-1);
-    (*deriv)(dx3J_dlogx, logx, logx3J, n-1);
-    for (i = 0; i < n - 1; i++) {
-        itp_x3J[i] = expl(itp_x3J[i]);
-        dx3J_dlogx[i] = dx3J_dlogx[i] * itp_x3J[i];
+
+    if (p.force_pos) {
+        (*interp)(itp_x3J, logx, logx3J, n-1);
+        (*deriv)(dx3J_dlogx, logx, logx3J, n-1);
+        for (i = 0; i < n - 1; i++) {
+            itp_x3J[i] = expl(itp_x3J[i]);
+            dx3J_dlogx[i] = dx3J_dlogx[i] * itp_x3J[i];
+        }
+    }
+    else {
+        (*interp)(itp_x3J, logx, x3J, n-1);
+        (*deriv)(dx3J_dlogx, logx, x3J, n-1);
     }
 
     // Compute I_nu on bin edges
@@ -222,7 +219,7 @@ void compute_step(
     long double Jout[], long double I_nu[], long double qdot[], long double Qdot[]
 ) {
     compute_step_dev(kT, rho_N, Y_e, n_type, energies, Js, n, dt, Jout, I_nu,
-                     qdot, Qdot, cubic_itp, cubic_diff, linear_diff, 0);
+                     qdot, Qdot, cubic_itp, cubic_diff, linear_diff, 0, true);
 }
 
 
@@ -258,7 +255,7 @@ void compute_step_dev(
     void (*interp_f)(long double[], long double[], long double[], int),
     void (*deriv_f)(long double[], long double[], long double[], int),
     void (*deriv_I)(long double[], long double[], long double[], int),
-    int stepper
+    int stepper, bool force_pos
 ) {
     int i;
 
@@ -270,6 +267,7 @@ void compute_step_dev(
     p.interp_f = interp_f;
     p.deriv_f = deriv_f;
     p.deriv_I = deriv_I;
+    p.force_pos = force_pos;
 
     // Compute relevant parameters
     long double beta = 1 / kT;
