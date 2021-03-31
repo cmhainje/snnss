@@ -93,7 +93,8 @@ void compute_step_dev(
     long double Jout[], long double I_nu[], long double qdot[], long double Qdot[],
     void (*interp_f)(long double[], long double[], long double[], int),
     void (*deriv_f)(long double[], long double[], long double[], int),
-    void (*deriv_I)(long double[], long double[], long double[], int)
+    void (*deriv_I)(long double[], long double[], long double[], int),
+    int stepper
 );
 
 #endif

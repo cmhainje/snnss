@@ -186,9 +186,10 @@ lib.compute_step_dev.argtypes = atypes + [
     ctypes.c_void_p,
     ctypes.c_void_p,
     ctypes.c_void_p,
+    ctypes.c_int
 ]
 
-def compute_step_dev(kT, rho_N, Y_e, n_type, energies, Js, dt, itp_f, drv_f, drv_I):
+def compute_step_dev(kT, rho_N, Y_e, n_type, energies, Js, dt, itp_f, drv_f, drv_I, step):
     """Computes a step update of step size dt
 
     Args:
@@ -205,6 +206,8 @@ def compute_step_dev(kT, rho_N, Y_e, n_type, energies, Js, dt, itp_f, drv_f, drv
         values are "linear", "cubic", or "spline".
         drv_I (string): desired differentiation method to use on I_nu. Allowed
         values are "linear", "cubic", or "spline".
+        step (string): desired integration method to use. Allowed values are
+        "euler", "rk2", or "rk4".
 
     Returns:
         ndarray: updated J distribution
@@ -214,6 +217,7 @@ def compute_step_dev(kT, rho_N, Y_e, n_type, energies, Js, dt, itp_f, drv_f, drv
     """
     itp_methods = {'linear': lib.linear_itp, 'cubic': lib.cubic_itp, 'spline': lib.spline_itp}
     drv_methods = {'linear': lib.linear_diff, 'cubic': lib.cubic_diff, 'spline': lib.spline_diff}
+    step_methods = {'euler': 0, 'rk2': 1, 'rk4': 2}
 
     n = len(energies)
     Jout = np.empty(n, dtype=ctypes.c_longdouble)
@@ -229,6 +233,7 @@ def compute_step_dev(kT, rho_N, Y_e, n_type, energies, Js, dt, itp_f, drv_f, drv
         Jout, I_nu, qdot, Qdot,
         itp_methods[itp_f],
         drv_methods[drv_f],
-        drv_methods[drv_I]
+        drv_methods[drv_I],
+        step_methods[step]
     )
     return Jout, I_nu, qdot, Qdot

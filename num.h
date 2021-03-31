@@ -1,6 +1,20 @@
 #ifndef CH_NUM
 #define CH_NUM
 
+
+/**
+ * Provides a clean structure for passing parameters to methods.
+ */
+struct Parameters {
+    long double kT;
+    long double rho_N;
+    long double Y_e;
+    int n_type;
+    void (*interp_f)(long double[], long double[], long double[], int);
+    void (*deriv_f)(long double[], long double[], long double[], int);
+    void (*deriv_I)(long double[], long double[], long double[], int);
+};
+
 /**
  * INTERPOLATION METHODS
  * 
@@ -78,5 +92,53 @@ void cubic_diff(long double out[], long double xs[], long double ys[], int n);
  * Computes the derivative of a cubic spline interpolator at the bin midpoints.
  */
 void spline_diff(long double out[], long double xs[], long double ys[], int n);
+
+
+/**
+ * INTEGRATION METHODS
+ * 
+ * API:
+ * @param yout  updated values of y
+ * @param xs    dimensionless energy zone centers
+ * @param ys    input values of y = x^3 J
+ * @param n     length of xs, ys, yout arrays
+ * @param dt    time update
+ * @param p     parameters
+ * @param rhs   computes the RHS of the ODE
+ */
+
+
+/**
+ * Implements an Euler step.
+ */
+void euler(
+    long double yout[],
+    long double xs[], long double ys[], int n,
+    long double dt,
+    struct Parameters p,
+    void (*rhs)(long double[], long double[], long double[], int, struct Parameters)
+);
+
+/**
+ * Implements a step via the second-order Runge-Kutta method.
+ */
+void rk2(
+    long double yout[],
+    long double xs[], long double ys[], int n,
+    long double dt,
+    struct Parameters p,
+    void (*rhs)(long double[], long double[], long double[], int, struct Parameters)
+);
+
+/**
+ * Implements a step via the fourth-order Runge-Kutta method.
+ */
+void rk4(
+    long double yout[],
+    long double xs[], long double ys[], int n,
+    long double dt,
+    struct Parameters p,
+    void (*rhs)(long double[], long double[], long double[], int, struct Parameters)
+);
 
 #endif

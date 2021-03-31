@@ -9,6 +9,16 @@
 
 bool WRITE_RESULTS = false;
 
+// struct Parameters {
+//     long double kT;
+//     long double rho_N;
+//     long double Y_e;
+//     int n_type;
+//     void (*interp_f)(long double[], long double[], long double[], int);
+//     void (*deriv_f)(long double[], long double[], long double[], int);
+//     void (*deriv_I)(long double[], long double[], long double[], int);
+// };
+
 long double gaussian(long double x)
 {
     return 0.5 * expl(-0.5 * powl((x - 10.0) / 3.0, 2));
@@ -82,11 +92,19 @@ long double compute_coeff(long double kT, long double rho_N)
 void compute_Inu(
     long double I_nu[],
     long double xs[], long double x3J[], int n,
-    long double beta, long double Y_e, int n_type,
-    void (*interp)(long double[], long double[], long double[], int),
-    void (*deriv)(long double[], long double[], long double[], int)
+    struct Parameters p
+    // long double beta, long double Y_e, int n_type,
+    // void (*interp)(long double[], long double[], long double[], int),
+    // void (*deriv)(long double[], long double[], long double[], int)
 ) {
     int i;
+
+    long double beta = 1 / p.kT;
+    long double Y_e = p.Y_e;
+    int n_type = p.n_type;
+
+    void (*interp)(long double[], long double[], long double[], int) = p.interp_f;
+    void (*deriv)(long double[], long double[], long double[], int) = p.deriv_f;
 
     long double logx[n], logx3J[n];
     for (i = 0; i < n; i++) {
@@ -128,7 +146,8 @@ void compute_Inu(
  * @param xs        dimensionless energy zone centers [length: n]
  * @param x3J       sampled values of x^3 J(x) [length: n]
  * @param n         number of energy zones
- * @param beta      inverse nucleon temperature [MeV]
+ * @param kT        nucleon temperature [MeV]
+ * @param rho_N     nucleon mass density [g/cm^3]
  * @param Y_e       electron fraction
  * @param n_type    nucleon type (0: proton, 1: neutron, else: both)
  * @param interp_f  interpolation function to use on f
@@ -138,16 +157,26 @@ void compute_Inu(
 void compute_rhs(
     long double out[],
     long double xs[], long double x3J[], int n,
-    long double beta, long double Y_e, int n_type,
-    void (*interp_f)(long double[], long double[], long double[], int),
-    void (*deriv_f)(long double[], long double[], long double[], int),
-    void (*deriv_I)(long double[], long double[], long double[], int)
+    struct Parameters p
+    // long double kT, long double rho_N, long double Y_e, int n_type,
+    // void (*interp_f)(long double[], long double[], long double[], int),
+    // void (*deriv_f)(long double[], long double[], long double[], int),
+    // void (*deriv_I)(long double[], long double[], long double[], int)
 ) {
     int i;
 
+    long double kT = p.kT;
+    long double rho_N = p.rho_N;
+    long double Y_e = p.Y_e;
+    int n_type = p.n_type;
+    void (*interp_f)(long double[], long double[], long double[], int) = p.interp_f;
+    void (*deriv_f)(long double[], long double[], long double[], int) = p.deriv_f;
+    void (*deriv_I)(long double[], long double[], long double[], int) = p.deriv_I;
+
     // Compute I_nu on the bin edges
     long double I_nu[n+1];
-    compute_Inu(I_nu, xs, x3J, n, beta, Y_e, n_type, interp_f, deriv_f);
+    // compute_Inu(I_nu, xs, x3J, n, 1/kT, Y_e, n_type, interp_f, deriv_f);
+    compute_Inu(I_nu, xs, x3J, n, p);
 
     // Compute d(I_nu)/d(log x) on bin centers and write to out
     long double log_edges[n+1];
@@ -157,10 +186,18 @@ void compute_rhs(
     log_edges[n] = logl(xs[n-1]) + 0.5 * bin_w;
 
     (*deriv_I)(out, log_edges, I_nu, n);
+
+    long double coeff = compute_coeff(kT, rho_N);
+    for (i = 0; i < n; i++)
+        out[i] *= coeff;
 }
 
 
 /**
+ * Computes a step update using the default numerical methods:
+ * cubic interpolation and differentiation on f(x),
+ * linear interpolation on I_nu, and Euler stepping.
+ * 
  * Physical parameters:
  * @param kT        nucleon temperature [MeV]
  * @param rho_N     nucleon mass density [g/cm^3]
@@ -185,7 +222,7 @@ void compute_step(
     long double Jout[], long double I_nu[], long double qdot[], long double Qdot[]
 ) {
     compute_step_dev(kT, rho_N, Y_e, n_type, energies, Js, n, dt, Jout, I_nu,
-                     qdot, Qdot, cubic_itp, cubic_diff, linear_diff);
+                     qdot, Qdot, cubic_itp, cubic_diff, linear_diff, 0);
 }
 
 
@@ -212,6 +249,7 @@ void compute_step(
  * @param interp_f  interpolation function to use on f
  * @param deriv_f   differentiation function to use on f
  * @param deriv_I   differentiation function to use on I_nu
+ * @param stepper   stepping function to use (0: euler, 1: rk2, 2: rk4)
  */
 void compute_step_dev(
     long double kT, long double rho_N, long double Y_e, int n_type,
@@ -219,18 +257,25 @@ void compute_step_dev(
     long double Jout[], long double I_nu[], long double qdot[], long double Qdot[],
     void (*interp_f)(long double[], long double[], long double[], int),
     void (*deriv_f)(long double[], long double[], long double[], int),
-    void (*deriv_I)(long double[], long double[], long double[], int)
+    void (*deriv_I)(long double[], long double[], long double[], int),
+    int stepper
 ) {
     int i;
 
+    struct Parameters p;
+    p.kT = kT;
+    p.rho_N = rho_N;
+    p.Y_e = Y_e;
+    p.n_type = n_type;
+    p.interp_f = interp_f;
+    p.deriv_f = deriv_f;
+    p.deriv_I = deriv_I;
+
     // Compute relevant parameters
     long double beta = 1 / kT;
-    // long double nN = rho_N * 1e3 * powl(c,2) / (m * e_unit) * powl(l_unit,3);
-    // long double coeff = 2 * G2 * nN / (3 * pi * powl(beta,3) * m);
-    long double coeff = compute_coeff(kT, rho_N);
     dt /= t_unit;
 
-    // Compute dimensionless energy zone centers, x^3 J
+    // Compute dimensionless energy zone centers and x^3 J
     long double xs[n], x3J[n];
     for (i = 0; i < n; i++) {
         xs[i] = energies[i] * beta;
@@ -238,29 +283,49 @@ void compute_step_dev(
     }
     
     // Compute I_nu on the bin edges
-    compute_Inu(I_nu, xs, x3J, n, beta, Y_e, n_type, interp_f, deriv_f);
+    // compute_Inu(I_nu, xs, x3J, n, beta, Y_e, n_type, interp_f, deriv_f);
+    compute_Inu(I_nu, xs, x3J, n, p);
 
     // Compute update to x^3 J
-    long double dInu_dlogx[n];
-    compute_rhs(dInu_dlogx, xs, x3J, n, beta, Y_e, n_type, interp_f, deriv_f, deriv_I);
+    switch (stepper) {
+        case 1:
+            rk2(x3J, xs, x3J, n, dt, p, compute_rhs);
+            break;
+        case 2:
+            rk4(x3J, xs, x3J, n, dt, p, compute_rhs);
+            break;
+        default:
+            euler(x3J, xs, x3J, n, dt, p, compute_rhs);
+            break;
+    }
+
+    // Update Js
+    for (i = 0; i < n; i++)
+        Jout[i] = fmaxl(x3J[i] / powl(xs[i], 3), 1e-30);
+
+
+    /* 
+    // compute_rhs(dInu_dlogx, xs, x3J, n, kT, rho_N, Y_e, n_type, interp_f, deriv_f, deriv_I);
 
     // Update Js 
-    printf("%Le\n", dt * coeff);
-
     for (i = 0; i < n; i++) {
-        x3J[i] += dt * coeff * dInu_dlogx[i];
+        x3J[i] += dt * dInu_dlogx[i];
         Jout[i] = fmaxl(x3J[i] / powl(xs[i], 3), 1e-30);
     }
+    */
 
     // Compute q dot, the spectrum of energy deposition
     // \dot{q} =  kT (I_\nu - d/dx (x I_\nu))   <- (eq. 44)
     //         = -kT d(I_\nu)/d(log x)
+    long double dInu_dlogx[n];
+    compute_rhs(dInu_dlogx, xs, x3J, n, p);
     for (i = 0; i < n; i++) {
-        qdot[i] = - kT * coeff * dInu_dlogx[i];
+        qdot[i] = - kT * dInu_dlogx[i];
     }
 
     // Compute Q dot, the rate of energy deposition
     // \dot{Q} = (kT)^4 / (2 \pi^2 \hbar^3 c^3) \int dx I_\nu
+    long double coeff = compute_coeff(kT, rho_N);
     long double coeffQ = powl(kT, 4) / (2 * pi*pi * powl(hbar * c, 3));
     long double edges[n+1], bin_w = logl(xs[1]) - logl(xs[0]);
     for (i = 0; i < n; i++) 
@@ -270,8 +335,7 @@ void compute_step_dev(
         Qdot[i] = 0.5 * coeffQ * coeff * (edges[i+1] - edges[i]) * (I_nu[i+1] + I_nu[i]);
 }
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const *argv[]) {
     int i; // for loops
 
     // Get number of bins from command-line

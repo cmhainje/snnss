@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdio.h>
+#include "num.h"
 
 /*** INTERPOLATION METHODS ***/
 
@@ -82,87 +83,6 @@ void spline_itp(long double out[], long double xs[], long double ys[], int n)
 }
 
 
-/**
- * Returns the value of the Lagrange polynomial, defined as follows.
- * L_{n,k} := \prod_{j = 0, j \neq k}^{n} (x - x_j) / (x_k - x_j)
- * n, k, and x match the arguments to the function. x_j = xs[j].
- * Note that xs must be of length n + 1.
- */
-long double lagrange_poly(int k, int n, long double x, long double xs[])
-{
-    int j;
-    long double ell = 1.0;
-    for (j = 0; j <= n; j++) { // includes n
-        if (j == k) continue;
-        ell *= (x - xs[j]) / (xs[k] - xs[j]);
-    }
-    return ell;
-}
-
-void quad_itp(long double out[], long double xs[], long double ys[], int n) 
-{
-    // For each interval, use Lagrange interpolation to fit two quadratics: one
-    // forward and one backward. i.e. for the interval specified by x[i] and
-    // x[i+1], fit a quadratic using x[i-1], x[i], x[i+1] and one using x[i],
-    // x[i+1], and x[i+2]. Average the results. (Use only forward for i = 0,
-    // only backward for i = n-1.)
-
-    int i, j, k;
-    long double x_int[3], y_int[3], x, ell;
-
-    for (i = 0; i < n; i++) {
-        // Get midpoint of interval
-        x = 0.5 * (xs[i] + xs[i+1]);
-
-        // Get forward interval prediction
-        long double forward = 0;
-        if (i != n - 1) {
-            for (j = 0; j < 3; j++) {
-                x_int[j] = xs[i+j];
-                y_int[j] = ys[i+j];
-            }
-            for (j = 0; j < 3; j++) {
-                ell = lagrange_poly(j, 2, x, x_int);
-                forward += y_int[j] * ell;
-            }
-        }
-        
-        // Get backward interval prediction
-        long double backward = 0;
-        if (i != 0) {
-            for (j = 0; j < 3; j++) {
-                x_int[j] = xs[i-1+j];
-                y_int[j] = ys[i-1+j];
-            }
-            for (j = 0; j < 3; j++) {
-                ell = lagrange_poly(j, 2, x, x_int);
-                backward += y_int[j] * ell;
-            }
-        }
-
-        if (i == 0)
-            out[i] = forward;
-        else if (i == n - 1)
-            out[i] = backward;
-        else 
-            out[i] = 0.5 * (forward + backward);
-    }
-
-}
-
-void four_point_itp(long double out[], long double xs[], long double ys[], int n) 
-{
-    int i;
-    long double one_16th = 1.0 / 16.0;
-    long double lo, hi;
-    for (i = 0; i < n; i++) {
-        // clamped padding
-        lo = (i == 0)   ? ys[0] : ys[i-1];
-        hi = (i == n-1) ? ys[n] : ys[i+2];
-        out[i] = (9.0 * (ys[i+1] + ys[i]) - (hi + lo)) * one_16th;
-    }
-}
-
 /*** DIFFERENTIATION METHODS ***/
 
 void linear_diff(long double out[], long double xs[], long double ys[], int n)
@@ -170,19 +90,6 @@ void linear_diff(long double out[], long double xs[], long double ys[], int n)
     int i;
     for (i = 0; i < n; i++)
         out[i] = (ys[i+1] - ys[i]) / (xs[i+1] - xs[i]);
-}
-
-void four_point_diff(long double out[], long double xs[], long double ys[], int n)
-{
-    int i;
-    long double one_48th = 1.0 / 48.0;
-    long double lo, hi;
-    for (i = 0; i < n; i++) {
-        // clamped padding
-        lo = (i == 0)   ? ys[0] : ys[i-1];
-        hi = (i == n-1) ? ys[n] : ys[i+2];
-        out[i] = (27.0 * (ys[i+1] - ys[i]) - (hi - lo)) * one_48th * 2.0 / (xs[i+1] - xs[i]);
-    }
 }
 
 void cubic_diff(long double out[], long double xs[], long double ys[], int n)
@@ -252,59 +159,86 @@ void spline_diff(long double out[], long double xs[], long double ys[], int n)
 
 /*** INTEGRATION METHODS ***/
 
-/*
-void euler(long double y[], long double yout[], int n, long double dt,
-           void (*rhs)(long double[]))
-{
+void euler(
+    long double yout[],
+    long double xs[], long double ys[], int n,
+    long double dt,
+    struct Parameters p,
+    void (*rhs)(long double[], long double[], long double[], int, struct Parameters)
+) {
     int i;
     long double dydt[n];
-    (*rhs)(dydt);
+    (*rhs)(dydt, xs, ys, n, p);
     for (i = 0; i < n; i++)
-        yout[i] = y[i] + dt * dydt[i];
+        yout[i] = ys[i] + dt * dydt[i];
 }
 
-void euler_recurse(long double y[], long double yout[], int n, long double
-                   dt, void (*rhs)(long double[]))
-{
-    er(y, yout, n, dt, rhs, 0);
+void rk2(
+    long double yout[],
+    long double xs[], long double ys[], int n,
+    long double dt,
+    struct Parameters p,
+    void (*rhs)(long double[], long double[], long double[], int, struct Parameters)
+) {
+    int i;
+    long double dydt[n], k1[n], k2[n], yt[n];
+
+    // Compute k1
+    (*rhs)(dydt, xs, ys, n, p);
+    for (i = 0; i < n; i++)
+        k1[i] = dt * dydt[i];
+
+    // Compute k2
+    for (i = 0; i < n; i++)
+        yt[i] = ys[i] + 0.5 * k1[i];
+    (*rhs)(dydt, xs, yt, n, p);
+    for (i = 0; i < n; i++)
+        k2[i] = dt * dydt[i];
+
+    // Compute the updated y values
+    for (i = 0; i < n; i++)
+        yout[i] = ys[i] + k2[i];
 }
 
-void er(long double y[], long double yout[], int n, long double dt,
-        void (*rhs)(long double[]), int depth)
-{
-    int i, ok = 0;
+void rk4(
+    long double yout[],
+    long double xs[], long double ys[], int n,
+    long double dt,
+    struct Parameters p,
+    void (*rhs)(long double[], long double[], long double[], int, struct Parameters)
+) {
+    int i;
+    long double dydt[n], k1[n], k2[n], k3[n], k4[n], yt[n];
 
-    // If at max recursion depth, just run Euler without running any deeper
-    // recursion (even if it happens to end up negative)
-    int MAX_DEPTH = 5;
-    if (depth >= MAX_DEPTH) {
-        euler(y, yout, n, dt, rhs);
-        return;
-    }
-    
-    // Run Euler with a test yout array so we don't potentially overwrite y
-    // values
-    long double test_yout[n];
-    euler(y, test_yout, n, dt, rhs);
+    // Compute k1
+    (*rhs)(dydt, xs, ys, n, p);
+    for (i = 0; i < n; i++)
+        k1[i] = dt * dydt[i];
 
-    // Check the test yout for negative values
-    for (i = 0; i < n; i++) {
-        if (test_yout[i] < 0) {
-            ok = 1;
-            break;
-        }
-    }
+    // Compute k2
+    for (i = 0; i < n; i++)
+        yt[i] = ys[i] + 0.5 * k1[i];
+    (*rhs)(dydt, xs, yt, n, p);
+    for (i = 0; i < n; i++)
+        k2[i] = dt * dydt[i];
 
-    // If there are no negatives, we are good
-    if (ok == 0) {
-        for (i = 0; i < n; i++)
-            yout[i] = test_yout[i];
-        return;
-    }
-    // If there are negatives, try to instead do two steps of half size
-    else {
-        er(y, test_yout, n, 0.5 * dt, rhs, depth + 1);
-        er(test_yout, yout, n, 0.5 * dt, rhs, depth + 1);
-    }
+    // Compute k3
+    for (i = 0; i < n; i++)
+        yt[i] = ys[i] + 0.5 * k2[i];
+    (*rhs)(dydt, xs, yt, n, p);
+    for (i = 0; i < n; i++)
+        k3[i] = dt * dydt[i];
+
+    // Compute k4
+    for (i = 0; i < n; i++)
+        yt[i] = ys[i] + k3[i];
+    (*rhs)(dydt, xs, yt, n, p);
+    for (i = 0; i < n; i++)
+        k4[i] = dt * dydt[i];
+
+    // Compute the updated y values
+    long double one_sixth = 1.0 / 6.0;
+    for (i = 0; i < n; i++)
+        yout[i] = ys[i] + one_sixth * (k1[i] + 2 * (k2[i] + k3[i]) + k4[i]);
 }
-*/
+

@@ -15,7 +15,8 @@ from tqdm import tqdm
 
 class Data():
     def __init__(self, kT, rho_N, Y_e, n_bins, e_min=1, e_max=100, dt=1e-6,
-                 n_type=2, itp_f="cubic", drv_f="cubic", drv_I="linear"):
+                 n_type=2, itp_f="cubic", drv_f="cubic", drv_I="linear", 
+                 step="euler"):
         """Initializes the Data object.
 
         Args:
@@ -30,6 +31,7 @@ class Data():
             itp_f (str, optional): method to use for interpolation of f. Allowed values: {"linear", "cubic", and "spline"}. Defaults to "cubic".
             drv_f (str, optional): method to use for differentiation of f. Allowed values: {"linear", "cubic", and "spline"}. Defaults to "cubic".
             drv_I (str, optional): method to use for differentiation of I_nu. Allowed values: {"linear", "cubic", and "spline"}. Defaults to "linear".
+            step (str, optional): method to use for integration stepping. Allowed values: {"euler", "rk2", and "rk4"}. Defaults to "euler".
         """
         self.kT = kT
         self.rho_N = rho_N
@@ -47,11 +49,13 @@ class Data():
         self.itp_f = itp_f
         self.drv_f = drv_f
         self.drv_I = drv_I
+        self.step_method = step
 
     def step(self, Js, dt):
         return compute_step_dev(
             self.kT, self.rho_N, self.Y_e, self.n_type,
-            self.es, Js, dt, self.itp_f, self.drv_f, self.drv_I
+            self.es, Js, dt, self.itp_f, self.drv_f, self.drv_I, 
+            self.step_method
         )
 
     def plot(self, ax0, ax1, ax2, i, fmt='-', color=None):
@@ -78,6 +82,7 @@ class Data():
         return fig
 
     def integrate_nsteps(self, n_steps, epoch_size=1000, quiet=False,
+                         step="euler",
                          init=lambda x: 0.5 * np.exp(-0.5 * (x-10)**2/3**2)):
         Js = np.clip(init(self.es), 1e-30, None)
         alpha = lib.compute_coeff(self.kT, self.rho_N)
