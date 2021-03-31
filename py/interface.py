@@ -3,7 +3,7 @@ interface.py
 Connor Hainje
 
 Provides a Python interface for the methods.
-Requires that `make ext` have been used in the parent directory.
+Requires that `make ext` has been run in the parent directory.
 """
 
 import ctypes 
@@ -137,6 +137,7 @@ atypes = [
     ctypes.c_longdouble,
     ctypes.c_longdouble,
     ctypes.c_longdouble,
+    ctypes.c_int,
     np.ctypeslib.ndpointer(dtype=ctypes.c_longdouble, ndim=1, flags=('C','W')),
     np.ctypeslib.ndpointer(dtype=ctypes.c_longdouble, ndim=1, flags=('C','W')),
     ctypes.c_int,
@@ -148,13 +149,14 @@ atypes = [
 ]
 lib.compute_step.argtypes = atypes
 
-def compute_step(kT, rho_N, Y_e, energies, Js, dt):
+def compute_step(kT, rho_N, Y_e, n_type, energies, Js, dt, n_type=2):
     """Computes a step update of step size dt
 
     Args:
         kT (float): nucleon temperature in MeV
         rho_N (float): nucleon mass density in g/cm^3
         Y_e (float): electron fraction (dimensionless)
+        n_type (int): nucleon type (0: protons, 1: neutrons, else: both)
         energies (ndarray): centers of energy zones in MeV
         Js (ndarray): neutrino distribution sampled at zone centers
         dt (float): desired stepsize in seconds
@@ -172,7 +174,7 @@ def compute_step(kT, rho_N, Y_e, energies, Js, dt):
     Qdot = np.empty(n, dtype=ctypes.c_longdouble)
 
     lib.compute_step(
-        kT, rho_N, Y_e,
+        kT, rho_N, Y_e, n_type,
         energies.astype(ctypes.c_longdouble),
         Js.astype(ctypes.c_longdouble),
         n, dt,
@@ -186,13 +188,14 @@ lib.compute_step_dev.argtypes = atypes + [
     ctypes.c_void_p,
 ]
 
-def compute_step_dev(kT, rho_N, Y_e, energies, Js, dt, itp_f, drv_f, drv_I):
+def compute_step_dev(kT, rho_N, Y_e, n_type, energies, Js, dt, itp_f, drv_f, drv_I):
     """Computes a step update of step size dt
 
     Args:
         kT (float): nucleon temperature in MeV
         rho_N (float): nucleon mass density in g/cm^3
         Y_e (float): electron fraction (dimensionless)
+        n_type (int): nucleon type (0: protons, 1: neutrons, else: both)
         energies (ndarray): centers of energy zones in MeV
         Js (ndarray): neutrino distribution sampled at zone centers
         dt (float): desired stepsize in seconds
@@ -219,7 +222,7 @@ def compute_step_dev(kT, rho_N, Y_e, energies, Js, dt, itp_f, drv_f, drv_I):
     Qdot = np.empty(n, dtype=ctypes.c_longdouble)
 
     lib.compute_step_dev(
-        kT, rho_N, Y_e,
+        kT, rho_N, Y_e, n_type,
         energies.astype(ctypes.c_longdouble),
         Js.astype(ctypes.c_longdouble),
         n, dt,

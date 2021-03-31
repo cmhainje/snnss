@@ -40,6 +40,7 @@ long double compute_coeff(long double kT, long double rho_N);
  * @param kT        nucleon temperature [MeV]
  * @param rho_N     nucleon mass density [g/cm^3]
  * @param Y_e       electron fraction
+ * @param n_type    nucleon type (0: proton, 1: neutron, else: both)
  * 
  * Input
  * @param energies  energy bins (zone *centers*) [MeV]
@@ -54,7 +55,7 @@ long double compute_coeff(long double kT, long double rho_N);
  * @param Qdot      currently just zeros [length: n]
  */
 void compute_step(
-    long double kT, long double rho_N, long double Y_e,
+    long double kT, long double rho_N, long double Y_e, int n_type,
     long double energies[], long double Js[], int n, long double dt,
     long double Jout[], long double I_nu[], long double qdot[], long double Qdot[]
 );
@@ -67,6 +68,7 @@ void compute_step(
  * @param kT        nucleon temperature [MeV]
  * @param rho_N     nucleon mass density [g/cm^3]
  * @param Y_e       electron fraction
+ * @param n_type    nucleon type (0: proton, 1: neutron, else: both)
  * 
  * Input
  * @param energies  energy bins (zone *centers*) [MeV]
@@ -86,7 +88,7 @@ void compute_step(
  * @param deriv_I   differentiation function to use on I_nu
  */
 void compute_step_dev(
-    long double kT, long double rho_N, long double Y_e,
+    long double kT, long double rho_N, long double Y_e, int n_type,
     long double energies[], long double Js[], int n, long double dt,
     long double Jout[], long double I_nu[], long double qdot[], long double Qdot[],
     void (*interp_f)(long double[], long double[], long double[], int),

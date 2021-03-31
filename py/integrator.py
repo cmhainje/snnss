@@ -15,10 +15,26 @@ from tqdm import tqdm
 
 class Data():
     def __init__(self, kT, rho_N, Y_e, n_bins, e_min=1, e_max=100, dt=1e-6,
-                 itp_f="cubic", drv_f="cubic", drv_I="linear"):
+                 n_type=2, itp_f="cubic", drv_f="cubic", drv_I="linear"):
+        """Initializes the Data object.
+
+        Args:
+            kT (float): nucleon temperature (multiplied by the Boltzmann constant) in MeV
+            rho_N (float): nucleon mass density in g/cm^3
+            Y_e (float): electron fraction (should be between 0 and 1)
+            n_bins (int): number of energy bins to use
+            e_min (int, optional): center of first energy bin in MeV. Defaults to 1.
+            e_max (int, optional): center of last energy bin in MeV. Defaults to 100.
+            dt (float, optional): size of time step for integrate_nstep. Defaults to 1e-6.
+            n_type (int, optional): nucleon type (0: protons, 1: neutrons, else: both). Defaults to 2.
+            itp_f (str, optional): method to use for interpolation of f. Allowed values: {"linear", "cubic", and "spline"}. Defaults to "cubic".
+            drv_f (str, optional): method to use for differentiation of f. Allowed values: {"linear", "cubic", and "spline"}. Defaults to "cubic".
+            drv_I (str, optional): method to use for differentiation of I_nu. Allowed values: {"linear", "cubic", and "spline"}. Defaults to "linear".
+        """
         self.kT = kT
         self.rho_N = rho_N
         self.Y_e = Y_e
+        self.n_type = n_type
         self.es = np.geomspace(e_min, e_max, num=n_bins)
 
         self.n_bins = n_bins
@@ -33,17 +49,18 @@ class Data():
         self.drv_I = drv_I
 
     def step(self, Js, dt):
-        return compute_step_dev(self.kT, self.rho_N, self.Y_e, self.es, Js, dt, 
-                                self.itp_f, self.drv_f, self.drv_I)
+        return compute_step_dev(
+            self.kT, self.rho_N, self.Y_e, self.n_type,
+            self.es, Js, dt, self.itp_f, self.drv_f, self.drv_I
+        )
 
     def plot(self, ax0, ax1, ax2, i, fmt='-', color=None):
-        xs = self.es / self.kT
-        binw = np.log(xs[1]) - np.log(xs[0])
-        edges = np.exp((np.arange(self.n_bins+1) - 0.5) * binw)
+        binw = np.log(self.es[1]) - np.log(self.es[0])
+        edges = self.es[0] * np.exp((np.arange(self.n_bins+1) - 0.5) * binw)
         label = self.times[i]
-        ax0.plot(xs, 1e19 * self.deltaJlist[i] * xs**2, fmt, color=color, label=f'{label:.3f} s')
+        ax0.plot(self.es, 1e19 * self.deltaJlist[i] * self.es**2, fmt, color=color, label=f'{label:.3f} s')
         ax1.plot(edges, 1e18 * self.Ilist[i], fmt, color=color, label=f'{label:.3f} s')
-        ax2.plot(xs, self.Jlist[i], fmt, color=color, label=f'{label:.3f} s')
+        ax2.plot(self.es, self.Jlist[i], fmt, color=color, label=f'{label:.3f} s')
 
     def make_plot(self):
         fig, ax = plt.subplots(3, 1, figsize=(12,12), tight_layout=True)
@@ -62,11 +79,14 @@ class Data():
 
     def integrate_nsteps(self, n_steps, epoch_size=1000, quiet=False,
                          init=lambda x: 0.5 * np.exp(-0.5 * (x-10)**2/3**2)):
-        Js = init(self.es)
+        Js = np.clip(init(self.es), 1e-30, None)
         alpha = lib.compute_coeff(self.kT, self.rho_N)
         t = 0
         for s in tqdm(range(n_steps+1), disable=quiet):
             Jout, Inu, _, _ = self.step(Js, self.dt)
+            if np.sum(np.isnan(Jout)) != 0:
+                print(f'Killed due to NaNs on step {s}')
+                break
             if (s % epoch_size) == 0:
                 self.Jlist.append(Jout)
                 self.Ilist.append(alpha * Inu)
@@ -79,6 +99,7 @@ class Data():
             Js[Js < 1e-30] = 1e-30
 
     def integrate_time(self, time, des_change, epoch_size=1000,
+                       max_dt=None, min_dt=1e-20,
                        init=lambda x: 0.5 * np.exp(-0.5 * (x-10)**2/3**2)):
         Js = init(self.es)
         dt = self.dt
@@ -91,12 +112,11 @@ class Data():
         while t <= time:
             Jout, Inu, _, _ = self.step(Js, dt)
 
-            # Run again with smaller stepsize if there are any negatives
-            if np.sum(Jout < 0) > 0:
-                max_change = np.amax(np.abs(Jout - Js) / Js)
-                dt = np.clip(dt * des_change / max_change, 1e-150, 1e-5)
+            max_change = np.amax(np.abs(Jout - Js) / Js)
+            if max_change > (1e6 * des_change):
+                dt = np.clip(dt * des_change / max_change, min_dt, max_dt)
                 Jout, Inu, _, _ = self.step(Js, dt)
-
+            
             if np.sum(np.isnan(Jout)) != 0:
                 print('Killed due to NaNs')
                 break
@@ -112,7 +132,7 @@ class Data():
             dtlist.append(dt)
 
             max_change = np.amax(np.abs(Jout - Js) / Js)
-            dt = min(1e-5, dt * des_change / max_change)
+            dt = np.clip(dt * des_change / max_change, min_dt, max_dt)
 
             Js = Jout
         return dtlist
