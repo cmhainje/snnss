@@ -149,7 +149,7 @@ atypes = [
 ]
 lib.compute_step.argtypes = atypes
 
-def compute_step(kT, rho_N, Y_e, n_type, energies, Js, dt, n_type=2):
+def compute_step(kT, rho_N, Y_e, n_type, energies, Js, dt):
     """Computes a step update of step size dt
 
     Args:

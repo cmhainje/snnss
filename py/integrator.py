@@ -61,12 +61,13 @@ class Data():
         self.drv_f = drv_f
         self.drv_I = drv_I
         self.step_method = step
+        self.force_pos = force_pos
 
     def step(self, Js, dt):
         return compute_step_dev(
             self.kT, self.rho_N, self.Y_e, self.n_type,
             self.es, Js, dt, self.itp_f, self.drv_f, self.drv_I, 
-            self.step_method
+            self.step_method, self.force_pos
         )
 
     def plot(self, ax0, ax1, ax2, i, fmt='-', color=None):
@@ -93,7 +94,6 @@ class Data():
         return fig
 
     def integrate_nsteps(self, n_steps, epoch_size=1000, quiet=False,
-                         step="euler",
                          init=lambda x: 0.5 * np.exp(-0.5 * (x-10)**2/3**2)):
         Js = np.clip(init(self.es), 1e-30, None)
         alpha = lib.compute_coeff(self.kT, self.rho_N)
