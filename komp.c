@@ -83,9 +83,6 @@ void compute_Inu(
     long double I_nu[],
     long double xs[], long double x3J[], int n,
     struct Parameters p
-    // long double beta, long double Y_e, int n_type,
-    // void (*interp)(long double[], long double[], long double[], int),
-    // void (*deriv)(long double[], long double[], long double[], int)
 ) {
     int i;
 
@@ -155,10 +152,6 @@ void compute_rhs(
     long double out[],
     long double xs[], long double x3J[], int n,
     struct Parameters p
-    // long double kT, long double rho_N, long double Y_e, int n_type,
-    // void (*interp_f)(long double[], long double[], long double[], int),
-    // void (*deriv_f)(long double[], long double[], long double[], int),
-    // void (*deriv_I)(long double[], long double[], long double[], int)
 ) {
     int i;
 

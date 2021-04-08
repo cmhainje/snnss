@@ -109,7 +109,6 @@ void spline_diff(long double out[], long double xs[], long double ys[], int n);
  * @param rhs   computes the RHS of the ODE
  */
 
-
 /**
  * Implements an Euler step.
  */
