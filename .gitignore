@@ -17,3 +17,10 @@ py/pickles/*
 todo.md
 komp
 ref*
+
+coefficients-check.jl
+py/long_runs.sh
+py/old_run.py
+py/plot.py
+py/thomp_compare_1.py
+py/timing.py
