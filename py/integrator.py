@@ -115,7 +115,7 @@ class Data():
             Js[Js < 1e-30] = 1e-30
 
     def integrate_time(self, time, des_change, epoch_size=1000,
-                       max_dt=None, min_dt=1e-20,
+                       max_dt=None, min_dt=1e-20, max_dt_change=1,
                        init=lambda x: 0.5 * np.exp(-0.5 * (x-10)**2/3**2)):
         Js = init(self.es)
         dt = self.dt
@@ -148,7 +148,8 @@ class Data():
             dtlist.append(dt)
 
             max_change = np.amax(np.abs(Jout - Js) / Js)
-            dt = np.clip(dt * des_change / max_change, min_dt, max_dt)
+            delta_dt = np.clip(dt * des_change / max_change - dt, -max_dt_change, max_dt_change);
+            dt = np.clip(dt + delta_dt, min_dt, max_dt)
 
             Js = Jout
         return dtlist
