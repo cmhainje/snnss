@@ -218,7 +218,7 @@ for i, l, c in zip([linear_itp, cubic_itp, spline_itp],
     logn = np.log10(nbins)
     loge = np.log10(e)
     slope = linregress(logn, loge.astype('float64')).slope
-    plt.plot(logn, loge, '-', color=c, label=f"{l}\n(slope: {slope:.2f})")
+    plt.plot(nbins, e, '-', color=c, label=f"{l}\n(log-log slope: {slope:.2f})")
 
 for i, l, c in zip([linear_itp, cubic_itp, spline_itp],
                    ['Linear', 'Cubic Lagrange', 'Cubic spline'],
@@ -227,13 +227,15 @@ for i, l, c in zip([linear_itp, cubic_itp, spline_itp],
     logn = np.log10(nbins)
     loge = np.log10(e)
     slope = linregress(logn, loge.astype('float64')).slope
-    plt.plot(logn, loge, '--', color=c, label=f"{l} (+)\n(slope: {slope:.2f})")
+    plt.plot(nbins, e, '--', color=c, label=f"{l} (+)\n(log-log slope: {slope:.2f})")
     
-plt.xlabel('log$_{10}$(# bins)', fontsize=14)
-plt.ylabel('log$_{10}$(LAE)', fontsize=14)
+plt.xlabel('Number of bins', fontsize=14)
+plt.ylabel('LAE', fontsize=14)
+plt.xscale('log')
+plt.yscale('log')
 plt.ylim((-6,0))
 plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.01), frameon=False, fontsize=12, ncol=2)
-plt.savefig('plots/itp_error.pdf', bbox_inches='tight')
+# plt.savefig('plots/itp_error.pdf', bbox_inches='tight')
 plt.show()
 
 # %%
@@ -399,12 +401,14 @@ for d, l in zip([linear_diff, cubic_diff, spline_diff],
                 ['Linear', 'Cubic Lagrange', 'Cubic spline']):
     e = get_errs(d, nbins, logx=True)
     slope = linregress(np.log10(nbins), np.log10(e).astype('float64')).slope
-    plt.plot(np.log10(nbins), np.log10(e), '-', label=f"{l} (slope: {slope:.2f})")
+    plt.plot(nbins, e, '-', label=f"{l} (slope: {slope:.2f})")
     
-plt.xlabel('log$_{10}$(# bins)', fontsize=14)
-plt.ylabel('log$_{10}$(LAE)', fontsize=14)
+plt.xlabel('Number of bins', fontsize=14)
+plt.ylabel('LAE', fontsize=14)
+plt.xscale('log')
+plt.yscale('log')
 plt.legend(loc='lower center', bbox_to_anchor=(0.5, 1.01), frameon=False, fontsize=12)
-plt.savefig('plots/deriv_error.pdf', bbox_inches='tight')
+# plt.savefig('plots/deriv_error.pdf', bbox_inches='tight')
 plt.show()
 
 # %%

@@ -138,17 +138,17 @@ plt.ylabel('Neutrino distribution function, $f$', fontsize=14)
 # plt.savefig('plots/thompson_compare.pdf', bbox_inches='tight')
 plt.show()
 
-# %% [markdown] heading_collapsed=true
+# %% [markdown]
 # # Binning scheme
 
-# %% hidden=true
+# %%
 ### ENERGY FROM 1 TO 100 MeV ###
 nbins = [12, 25, 50, 100]
 runs = [Data(2.0, 1e11, 0.2, n, dt=1e-6) for n in nbins]
 for r in runs:
     r.integrate_nsteps(30_000)
 
-# %% hidden=true
+# %%
 fig, axs = plt.subplots(2, 2, figsize=(7,7), sharex=True, sharey=True) #, tight_layout=True)
 axs = axs.ravel()
 
@@ -165,7 +165,7 @@ axs[3].legend(frameon=False, loc='center left', bbox_to_anchor=(1.05, 1.05))
 # plt.savefig('plots/solver_nbin_evolution.pdf', bbox_inches='tight')
 plt.show()
 
-# %% hidden=true
+# %%
 fig, ax = plt.subplots(1, 1, figsize=(7,6), tight_layout=True)
 
 ilist = list(range(0, len(runs[0].Jlist), 3))
@@ -183,7 +183,7 @@ plt.legend(frameon=False)
 # plt.savefig('plots/evolution_12_vs_100.pdf', bbox_inches='tight')
 plt.show()
 
-# %% hidden=true
+# %%
 ### ERROR ANALYSIS ###
 plt.figure(figsize=(7,6), tight_layout=True)
 
@@ -198,22 +198,24 @@ for i, c in zip(ilist[1:], rainbow):
         ns.append(r.n_bins)
         errs.append(lae)
         
-    plt.plot(np.log10(ns), np.log10(errs), '-', color=c, label=f"{runs[-1].times[i]*1e3:.0f} ms")
+    plt.plot(ns, errs, '-', color=c, label=f"{runs[-1].times[i]*1e3:.0f} ms")
         
 plt.legend(frameon=False)
-plt.xlabel('$\log_{10}$ (number of bins)', fontsize=14)
-plt.ylabel('$\log_{10}$ (LAE)', fontsize=14)
-# plt.savefig('plots/error_evolution.pdf', bbox_inches='tight')
+plt.xlabel('Number of bins', fontsize=14)
+plt.ylabel('LAE', fontsize=14)
+plt.xscale('log')
+plt.yscale('log')
+plt.savefig('plots/error_evolution.pdf', bbox_inches='tight')
 plt.show()
 
-# %% hidden=true
+# %%
 ### 1 TO 100 MeV -- ERROR ANALYSIS ###
 nbins = [12, 17, 25, 37, 50, 70, 100]
 error_runs = [Data(2.0, 1e11, 0.2, n, dt=1e-6) for n in nbins]
 for r in error_runs:
     r.integrate_nsteps(30_000, epoch_size=2000)
 
-# %% hidden=true
+# %%
 ### ERROR ANALYSIS ###
 plt.figure(figsize=(7,6), tight_layout=True)
 
@@ -236,13 +238,13 @@ plt.ylabel('$\log_{10}$ (LAE)', fontsize=14)
 # plt.savefig('plots/error_evolution_dense.pdf', bbox_inches='tight')
 plt.show()
 
-# %% hidden=true
+# %%
 ### ENERGY FROM 1 TO 300 MeV ###
 wide_runs = [Data(2.0, 1e11, 0.2, 12, dt=1e-6, e_max=300), Data(2.0, 1e11, 0.2, 100, dt=1e-6, e_max=300)]
 for r in wide_runs:
     r.integrate_nsteps(30_000)
 
-# %% hidden=true
+# %%
 fig, ax = plt.subplots(1, 1, figsize=(7,6), tight_layout=True)
 
 ilist = list(range(0, len(wide_runs[0].Jlist), 3))
@@ -460,15 +462,15 @@ fig.legend(['Simple', 'Simpson'], frameon=False, loc='lower center',
 
 plt.show()
 
-# %% [markdown] heading_collapsed=true
+# %% [markdown]
 # # Performance
 
-# %% hidden=true
+# %%
 nbins = np.geomspace(12, 100, 10, endpoint=True).astype(int)
 nbins = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,100]
 print(nbins)
 
-# %% hidden=true
+# %%
 kT, rho_N, Y_e, dt = 2.0, 1e11, 0.2, 1e-6
 
 lin_lin = [Data(kT, rho_N, Y_e, n, dt=dt, itp_f='linear', drv_f='linear', drv_I='linear') for n in nbins]
@@ -483,10 +485,10 @@ cub_spl = [Data(kT, rho_N, Y_e, n, dt=dt, itp_f='cubic', drv_f='cubic', drv_I='s
 # spl_cub = [Data(kT, rho_N, Y_e, n, dt=dt, itp_f='spline', drv_f='spline', drv_I='cubic') for n in nbins]
 # spl_spl = [Data(kT, rho_N, Y_e, n, dt=dt, itp_f='spline', drv_f='spline', drv_I='spline') for n in nbins]
 
-# %% hidden=true
+# %%
 tqdm._instances.clear()
 
-# %% hidden=true
+# %%
 n_steps, epoch_size = 1_000, 1_000
 
 init_f = lambda x: 0.5 * np.exp(-0.5 * (x - 10)**2 / 3**2)
@@ -503,10 +505,10 @@ for r in tqdm(cub_spl): r.integrate_nsteps(n_steps, epoch_size=epoch_size, init=
 # for r in spl_cub: r.integrate_nsteps(n_steps, epoch_size=epoch_size)
 # for r in spl_spl: r.integrate_nsteps(n_steps, epoch_size=epoch_size)
 
-# %% [markdown] heading_collapsed=true hidden=true
+# %% [markdown]
 # ## Error analysis
 
-# %% hidden=true
+# %%
 def make_error_plot(ax, runs, title="", fmt='o'):
     ilist = [0,-1]
     # rainbow = plt.get_cmap('rainbow')(np.linspace(0, 1, num=len(ilist)-1))
@@ -518,11 +520,11 @@ def make_error_plot(ax, runs, title="", fmt='o'):
             lae = compute_error(r.es, r.Jlist[i], ref)
             ns.append(r.n_bins)
             errs.append(lae)
-        ax.plot(np.log10(ns), np.log10(errs), fmt, label=f"{runs[-1].times[i]*1e3:.1f} ms")
+        ax.plot(ns, errs, fmt, label=f"{runs[-1].times[i]*1e3:.1f} ms")
     ax.set_title(title)
 
 
-# %% hidden=true
+# %%
 fig, axs = plt.subplots(2, 3, figsize=(12,8), sharex=True, sharey=False, tight_layout=True)
 
 make_error_plot(axs[0,0], lin_lin, title="$f$: linear, $I_\\nu$: linear")
@@ -552,14 +554,20 @@ axs[0].set_title('Linear interp/diff on $f(x)$', fontsize=14)
 axs[1].set_title('Cubic Lagrange interp/diff on $f(x)$', fontsize=14)
 # axs[0].set_ylabel('$\log$(LAE)', fontsize=14)
 
-axs[1].set_xlabel("$\log$(number of bins)",fontsize=14)
-fig.text(-0.02,0.5,"$\log$(LAE)",fontsize=14,rotation="vertical")
+axs[1].set_xlabel("Number of bins",fontsize=14)
+
+axs[0].set_xscale('log')
+axs[0].set_yscale('log')
+axs[1].set_xscale('log')
+axs[1].set_yscale('log')
+
+fig.text(-0.02,0.5,"LAE",fontsize=14,rotation="vertical")
 
 fig.legend(['Linear','Cubic Lagrange','Cubic spline'], title="Diff method on $I_\\nu(x)$", frameon=False, fontsize=12, title_fontsize=12, loc='center left', bbox_to_anchor=(1.0,0.5))
 # plt.savefig('plots/error_methods.pdf', bbox_inches='tight')
 plt.show()
 
-# %% [markdown] heading_collapsed=true hidden=true
+# %% [markdown] heading_collapsed=true
 # ## Timing analysis
 
 # %% hidden=true
@@ -618,15 +626,15 @@ axs[1].legend(frameon=False, title="Diff method on $I_\\nu(x)$", title_fontsize=
 plt.savefig('plots/solver-runtime.pdf', bbox_inches='tight')
 plt.show()
 
-# %% [markdown] heading_collapsed=true
+# %% [markdown]
 # # ODE steppers
 
-# %% [markdown] hidden=true
+# %% [markdown]
 # We want to test our three ODE steppers: `euler`, `rk2`, and `rk4`.
 # For fixed time steps, we want to analyze the resulting plots, error performance, and runtime.
 # For adaptive time steps, we want to compare the resulting distributions and time step sizes.
 
-# %% hidden=true
+# %%
 eul = Data(2.0, 1e11, 0.2, 50, step='euler')
 rk2 = Data(2.0, 1e11, 0.2, 50, step='rk2')
 rk4 = Data(2.0, 1e11, 0.2, 50, step='rk4')
@@ -636,7 +644,7 @@ for r in [eul, rk2, rk4]:
     make_plot(r, range(len(r.Jlist)))
     plt.show()
 
-# %% hidden=true
+# %%
 fig, axs = plt.subplots(3, 1, figsize=(6, 12), sharex=True)
 
 add_plot(axs[0], eul, range(len(eul.Jlist)), legend=False, labels=False)
@@ -654,16 +662,16 @@ axs[1].legend(frameon=False, loc='center left', bbox_to_anchor=(1.01,0.5), fonts
 # plt.savefig('plots/ode_methods.pdf', bbox_inches='tight')
 plt.show()
 
-# %% hidden=true
+# %%
 
-# %% hidden=true
-nbins = [12, 18, 25, 37, 50, 100]
+# %%
+nbins = [12, 15, 18, 21, 25, 31, 37, 50, 100]
 
 euls = [Data(2.0, 1e11, 0.2, n, step='euler') for n in nbins]
 rk2s = [Data(2.0, 1e11, 0.2, n, step='rk2') for n in nbins]
 rk4s = [Data(2.0, 1e11, 0.2, n, step='rk4') for n in nbins]
 
-# %% hidden=true
+# %%
 times = []
 
 for l in [euls, rk2s, rk4s]:
@@ -676,7 +684,7 @@ for l in [euls, rk2s, rk4s]:
     times.append(l_times)
 
 
-# %% hidden=true
+# %%
 def make_error_plot(ax, runs, title="", fmt='o'):
     ilist = [0,-1]
     # rainbow = plt.get_cmap('rainbow')(np.linspace(0, 1, num=len(ilist)-1))
@@ -688,26 +696,29 @@ def make_error_plot(ax, runs, title="", fmt='o'):
             lae = compute_error(r.es, r.Jlist[i], ref)
             ns.append(r.n_bins)
             errs.append(lae)
-        ax.plot(np.log10(ns), np.log10(errs), fmt, label=f"{runs[-1].times[i]*1e3:.1f} ms")
+        ax.plot(ns, errs, fmt, label=f"{runs[-1].times[i]*1e3:.1f} ms")
     ax.set_title(title)
 
 
-# %% hidden=true
+# %%
 fig, ax = plt.subplots(1, 1, figsize=(7,6))
 
 make_error_plot(ax, euls, fmt='-')
 make_error_plot(ax, rk2s, fmt='-')
 make_error_plot(ax, rk4s, fmt='-')
 
-plt.xlabel('$\log$ (number of bins)', fontsize=14)
-plt.ylabel('$\log$ (LAE)', fontsize=14)
+plt.xlabel('Number of bins', fontsize=14)
+plt.ylabel('LAE', fontsize=14)
 plt.legend(['Euler', 'RK2', 'RK4'], frameon=False, fontsize=12)
+
+plt.xscale('log')
+plt.yscale('log')
 
 # plt.savefig('plots/ode_errors.pdf', bbox_inches='tight')
 
 plt.show()
 
-# %% hidden=true
+# %%
 fig, ax = plt.subplots(1, 1, figsize=(6,6))
 
 for ts, l in zip(times, ['Euler', 'RK2', 'RK4']):
@@ -721,7 +732,7 @@ plt.ylabel('Time per time-step [ms]', fontsize=14)
 plt.savefig('plots/ode_runtime.pdf', bbox_inches='tight')
 plt.show()
 
-# %% hidden=true
+# %%
 eul = Data(2.0, 1e11, 0.2, 50, step='euler')
 rk2 = Data(2.0, 1e11, 0.2, 50, step='rk2')
 rk4 = Data(2.0, 1e11, 0.2, 50, step='rk4')
@@ -729,10 +740,10 @@ rk4 = Data(2.0, 1e11, 0.2, 50, step='rk4')
 dts = []
 
 for r in [eul, rk2, rk4]:
-    dtlist = r.integrate_time(0.01, 0.01, epoch_size=1500, max_dt_change=1e-9)
+    dtlist = r.integrate_time(0.01, 0.005, epoch_size=1500, max_dt_change=1e-9)
     dts.append(dtlist)
 
-# %% hidden=true
+# %%
 plt.figure(figsize=(6,6), tight_layout=True)
 for dt in dts:
     plt.plot(dt)
@@ -740,11 +751,11 @@ plt.yscale('log')
 plt.xlabel('Step number', fontsize=14)
 plt.ylabel('Step size [s]', fontsize=14)
 plt.legend(['Euler', 'RK2', 'RK4'], frameon=False, fontsize=12, loc='lower right')
-# plt.savefig('plots/ode_timestep.pdf', bbox_inches='tight')
+plt.savefig('plots/ode_timestep.pdf', bbox_inches='tight')
 plt.show()
 
 fig, axs = plt.subplots(3, 1, figsize=(6, 10), tight_layout=True, sharex=True)
-eul_t = np.array(dts[0])[:10911]
+eul_t = np.array(dts[0])[:18220]
 rk2_t = np.array(dts[1])
 rk4_t = np.array(dts[2])
 
@@ -758,7 +769,7 @@ axs[2].plot((rk4_t - rk2_t) / rk2_t)
 axs[2].set_ylabel('$(dt_{RK4} - dt_{RK2})/dt_{RK2}$', fontsize=14)
 axs[2].set_xlabel('Step number', fontsize=14)
 
-# plt.savefig('plots/ode_timestep_compare.pdf', bbox_inches='tight')
+plt.savefig('plots/ode_timestep_compare.pdf', bbox_inches='tight')
 plt.show()
 
-# %% hidden=true
+# %%
