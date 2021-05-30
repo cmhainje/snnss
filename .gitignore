@@ -18,6 +18,10 @@ todo.md
 komp
 ref*
 
+c90/*.o
+c90/*.gch
+c90/test
+
 coefficients-check.jl
 py/long_runs.sh
 py/old_run.py
